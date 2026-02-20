@@ -1,0 +1,49 @@
+---
+- name: Workspace Backup Demo
+  hosts: localhost
+  gather_facts: yes
+
+  vars:
+    repo_path: "{{ playbook_dir }}"
+    full_backup_path: "{{ repo_path }}/backups/full"
+    specific_backup_path: "{{ repo_path }}/backups/specific"
+    timestamp: "{{ ansible_date_time.date }}_{{ ansible_date_time.time | replace(':','-') }}"
+    workspace_source_path: "{{ playbook_dir }}/sample_workspaces"
+
+  tasks:
+
+    - name: Validate specific workspace input
+      fail:
+        msg: "Workspace name must be provided for Specific Workspace backup."
+      when: backup_type == "Specific Workspace" and (workspace_name is not defined or workspace_name == "")
+
+    - name: Create full backup
+      archive:
+        path: "{{ workspace_source_path }}"
+        dest: "{{ full_backup_path }}/full_{{ timestamp }}.tar.gz"
+        format: gz
+      when: backup_type == "Full Backup"
+
+    - name: Create specific workspace backup
+      archive:
+        path: "{{ workspace_source_path }}/{{ workspace_name }}"
+        dest: "{{ specific_backup_path }}/{{ workspace_name }}_{{ timestamp }}.tar.gz"
+        format: gz
+      when: backup_type == "Specific Workspace"
+
+    - name: Git add
+      command: git add backups/
+      args:
+        chdir: "{{ repo_path }}"
+
+    - name: Git commit
+      command: git commit -m "Backup taken on {{ timestamp }}"
+      args:
+        chdir: "{{ repo_path }}"
+      ignore_errors: yes
+
+    - name: Git push
+      command: git push
+      args:
+        chdir: "{{ repo_path }}"
+
