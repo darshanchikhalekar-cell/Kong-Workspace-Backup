@@ -1,41 +1,48 @@
 ---
-- name: Backup Workspace From Kong VM
+- name: Backup Kong Configuration (DB Mode)
   hosts: all
   become: yes
   gather_facts: yes
 
   vars:
-    remote_workspace_path: /opt/workspaces   # change as per your VM
+    kong_conf: /etc/kong/kong.conf
     remote_backup_path: /tmp
     timestamp: "{{ ansible_date_time.date }}_{{ ansible_date_time.time | replace(':','-') }}"
     local_repo_path: "{{ lookup('env','PWD') }}/project"
-    local_backup_path: "{{ local_repo_path }}/backups"
 
   tasks:
 
-    - name: Validate specific workspace input
-      fail:
-        msg: "Workspace name required for specific backup"
-      when: backup_type == "Specific Workspace" and (workspace_name is not defined or workspace_name == "")
+    - name: Extract DB name
+      shell: grep "^pg_database" {{ kong_conf }} | awk -F= '{print $2}' | xargs
+      register: db_name_raw
 
-    - name: Create full backup on remote VM
-      shell: >
-        tar -czf {{ remote_backup_path }}/full_{{ timestamp }}.tar.gz -C {{ remote_workspace_path }} .
-      when: backup_type == "Full Backup"
+    - name: Extract DB user
+      shell: grep "^pg_user" {{ kong_conf }} | awk -F= '{print $2}' | xargs
+      register: db_user_raw
 
-    - name: Create specific backup on remote VM
+    - name: Extract DB host
+      shell: grep "^pg_host" {{ kong_conf }} | awk -F= '{print $2}' | xargs
+      register: db_host_raw
+
+    - name: Set DB variables
+      set_fact:
+        db_name: "{{ db_name_raw.stdout }}"
+        db_user: "{{ db_user_raw.stdout }}"
+        db_host: "{{ db_host_raw.stdout }}"
+
+    - name: Dump Kong database from Kong VM
       shell: >
-        tar -czf {{ remote_backup_path }}/{{ workspace_name }}_{{ timestamp }}.tar.gz
-        -C {{ remote_workspace_path }} {{ workspace_name }}
-      when: backup_type == "Specific Workspace"
+        PGPASSWORD={{ lookup('env','KONG_PG_PASSWORD') }}
+        pg_dump -h {{ db_host }} -U {{ db_user }} {{ db_name }}
+        > {{ remote_backup_path }}/kong_db_{{ timestamp }}.sql
 
     - name: Fetch backup to AWX
       fetch:
-        src: "{{ remote_backup_path }}/{{ backup_type == 'Full Backup' | ternary('full_' ~ timestamp ~ '.tar.gz', workspace_name ~ '_' ~ timestamp ~ '.tar.gz') }}"
+        src: "{{ remote_backup_path }}/kong_db_{{ timestamp }}.sql"
         dest: "{{ local_repo_path }}/backups/"
         flat: yes
 
-    - name: Git add
+    - name: Git add backup
       delegate_to: localhost
       command: git add backups/
       args:
@@ -43,7 +50,7 @@
 
     - name: Git commit
       delegate_to: localhost
-      command: git commit -m "Backup from {{ inventory_hostname }} on {{ timestamp }}"
+      command: git commit -m "Kong DB backup from {{ inventory_hostname }} on {{ timestamp }}"
       args:
         chdir: "{{ local_repo_path }}"
       ignore_errors: yes
