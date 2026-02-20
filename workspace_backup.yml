@@ -8,7 +8,7 @@
     full_backup_path: "{{ repo_path }}/backups/full"
     specific_backup_path: "{{ repo_path }}/backups/specific"
     timestamp: "{{ ansible_date_time.date }}_{{ ansible_date_time.time | replace(':','-') }}"
-    workspace_source_path: "/tmp/workspaces"   # Change if needed
+    workspace_source_path: "{{ playbook_dir }}/sample_workspaces"
 
   tasks:
 
@@ -46,3 +46,4 @@
       command: git push
       args:
         chdir: "{{ repo_path }}"
+
