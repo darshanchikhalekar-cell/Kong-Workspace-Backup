@@ -5,28 +5,40 @@
   gather_facts: yes
 
   vars:
-    pg_host: 192.168.64.128
-    pg_user: kong
-    pg_db: kong
+    pg_host: 192.168.64.128      # Postgres server IP
+    pg_user: kong               # DB user
+    pg_db: kong                 # DB name
     remote_backup_path: /tmp
     timestamp: "{{ ansible_date_time.date }}_{{ ansible_date_time.time | replace(':','-') }}"
     local_repo_path: "{{ lookup('env','PWD') }}/project"
 
   tasks:
 
+    - name: Check pg_dump availability
+      command: which pg_dump
+      register: pg_dump_check
+      failed_when: pg_dump_check.rc != 0
+
     - name: Dump Kong configuration database
       shell: >
         PGPASSWORD={{ db_password }}
         pg_dump -h {{ pg_host }} -U {{ pg_user }} {{ pg_db }}
-        > {{ remote_backup_path }}/kong_config_{{ timestamp }}.sql
+        > {{ remote_backup_path }}/kong_config_{{ inventory_hostname }}_{{ timestamp }}.sql
+      args:
+        executable: /bin/bash
 
     - name: Fetch backup to AWX repo
       fetch:
-        src: "{{ remote_backup_path }}/kong_config_{{ timestamp }}.sql"
+        src: "{{ remote_backup_path }}/kong_config_{{ inventory_hostname }}_{{ timestamp }}.sql"
         dest: "{{ local_repo_path }}/backups/"
         flat: yes
 
-    - name: Git add
+    - name: Remove remote temporary backup file
+      file:
+        path: "{{ remote_backup_path }}/kong_config_{{ inventory_hostname }}_{{ timestamp }}.sql"
+        state: absent
+
+    - name: Git add backup
       delegate_to: localhost
       command: git add backups/
       args:
