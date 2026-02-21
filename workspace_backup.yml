@@ -5,12 +5,13 @@
   gather_facts: yes
 
   vars:
-    pg_host: 192.168.64.128      # Postgres server IP
-    pg_user: kong               # DB user
-    pg_db: kong                 # DB name
+    pg_host: 192.168.64.128        # Postgres Server IP
+    pg_user: kong                 # DB User
+    pg_db: kong                   # DB Name
     remote_backup_path: /tmp
     timestamp: "{{ ansible_date_time.date }}_{{ ansible_date_time.time | replace(':','-') }}"
     local_repo_path: "{{ lookup('env','PWD') }}/project"
+    backup_file: "kong_config_{{ inventory_hostname }}_{{ timestamp }}.sql"
 
   tasks:
 
@@ -23,29 +24,35 @@
       shell: >
         PGPASSWORD={{ db_password }}
         pg_dump -h {{ pg_host }} -U {{ pg_user }} {{ pg_db }}
-        > {{ remote_backup_path }}/kong_config_{{ inventory_hostname }}_{{ timestamp }}.sql
+        > {{ remote_backup_path }}/{{ backup_file }}
       args:
         executable: /bin/bash
 
     - name: Fetch backup to AWX repo
       fetch:
-        src: "{{ remote_backup_path }}/kong_config_{{ inventory_hostname }}_{{ timestamp }}.sql"
+        src: "{{ remote_backup_path }}/{{ backup_file }}"
         dest: "{{ local_repo_path }}/backups/"
         flat: yes
 
     - name: Remove remote temporary backup file
       file:
-        path: "{{ remote_backup_path }}/kong_config_{{ inventory_hostname }}_{{ timestamp }}.sql"
+        path: "{{ remote_backup_path }}/{{ backup_file }}"
         state: absent
+
+    # -------------------------
+    # Git operations on AWX node
+    # -------------------------
 
     - name: Git add backup
       delegate_to: localhost
+      become: false
       command: git add backups/
       args:
         chdir: "{{ local_repo_path }}"
 
     - name: Git commit
       delegate_to: localhost
+      become: false
       command: git commit -m "Kong config backup from {{ inventory_hostname }} on {{ timestamp }}"
       args:
         chdir: "{{ local_repo_path }}"
@@ -53,6 +60,7 @@
 
     - name: Git push
       delegate_to: localhost
+      become: false
       command: git push
       args:
         chdir: "{{ local_repo_path }}"
