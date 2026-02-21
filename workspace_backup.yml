@@ -10,11 +10,16 @@
     pg_db: kong
     remote_backup_path: /tmp
     local_clone_path: /tmp/kong_backup_repo
+    repo_url: "https://github.com/darshanchikhalekar-cell/Kong-Workspace-Backup.git"
     timestamp: "{{ ansible_date_time.date }}_{{ ansible_date_time.time | replace(':','-') }}"
     backup_file: "kong_config_{{ inventory_hostname }}_{{ timestamp }}.sql"
-    repo_url: "https://github.com/darshanchikhalekar-cell/Kong-Workspace-Backup.git"
 
   tasks:
+
+    - name: Check pg_dump availability
+      command: which pg_dump
+      register: pg_dump_check
+      failed_when: pg_dump_check.rc != 0
 
     - name: Dump Kong configuration database
       shell: >
@@ -36,7 +41,7 @@
         state: absent
 
     # -------------------------
-    # Git operations (clean clone)
+    # Git operations (clean clone approach)
     # -------------------------
 
     - name: Remove old local clone if exists
@@ -69,6 +74,20 @@
       args:
         chdir: "{{ local_clone_path }}"
 
+    - name: Configure Git username
+      delegate_to: localhost
+      become: false
+      command: git config user.name "AWX Automation"
+      args:
+        chdir: "{{ local_clone_path }}"
+
+    - name: Configure Git email
+      delegate_to: localhost
+      become: false
+      command: git config user.email "awx@demo.local"
+      args:
+        chdir: "{{ local_clone_path }}"
+
     - name: Git commit
       delegate_to: localhost
       become: false
@@ -83,4 +102,3 @@
       command: git push
       args:
         chdir: "{{ local_clone_path }}"
-
