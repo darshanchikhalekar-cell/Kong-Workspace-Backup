@@ -12,7 +12,7 @@
     local_clone_path: /tmp/kong_backup_repo
     timestamp: "{{ ansible_date_time.date }}_{{ ansible_date_time.time | replace(':','-') }}"
     backup_file: "kong_config_{{ inventory_hostname }}_{{ timestamp }}.sql"
-    repo_url: "https://github.com/<your-username>/workspace-backup-demo.git"
+    repo_url: "https://github.com/darshanchikhalekar-cell/Kong-Workspace-Backup.git"
 
   tasks:
 
@@ -83,3 +83,4 @@
       command: git push
       args:
         chdir: "{{ local_clone_path }}"
+
