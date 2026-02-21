@@ -5,12 +5,12 @@
   gather_facts: yes
 
   vars:
-    pg_host: 192.168.64.128        # Postgres Server IP
-    pg_user: kong                 # DB User
-    pg_db: kong                   # DB Name
+    pg_host: 192.168.64.128
+    pg_user: kong
+    pg_db: kong
     remote_backup_path: /tmp
     timestamp: "{{ ansible_date_time.date }}_{{ ansible_date_time.time | replace(':','-') }}"
-    local_repo_path: "{{ lookup('env','PWD') }}/project"
+    local_repo_path: "/runner/project"
     backup_file: "kong_config_{{ inventory_hostname }}_{{ timestamp }}.sql"
 
   tasks:
