@@ -5,44 +5,28 @@
   gather_facts: yes
 
   vars:
-    kong_conf: /etc/kong/kong.conf
+    pg_host: 192.168.64.128
+    pg_user: kong
+    pg_db: kong
     remote_backup_path: /tmp
     timestamp: "{{ ansible_date_time.date }}_{{ ansible_date_time.time | replace(':','-') }}"
     local_repo_path: "{{ lookup('env','PWD') }}/project"
 
   tasks:
 
-    - name: Extract DB name
-      shell: grep "^pg_database" {{ kong_conf }} | awk -F= '{print $2}' | xargs
-      register: db_name_raw
-
-    - name: Extract DB user
-      shell: grep "^pg_user" {{ kong_conf }} | awk -F= '{print $2}' | xargs
-      register: db_user_raw
-
-    - name: Extract DB host
-      shell: grep "^pg_host" {{ kong_conf }} | awk -F= '{print $2}' | xargs
-      register: db_host_raw
-
-    - name: Set DB variables
-      set_fact:
-        db_name: "{{ db_name_raw.stdout }}"
-        db_user: "{{ db_user_raw.stdout }}"
-        db_host: "{{ db_host_raw.stdout }}"
-
-    - name: Dump Kong database from Kong VM
+    - name: Dump Kong configuration database
       shell: >
-        PGPASSWORD={{ lookup('env','KONG_PG_PASSWORD') }}
-        pg_dump -h {{ db_host }} -U {{ db_user }} {{ db_name }}
-        > {{ remote_backup_path }}/kong_db_{{ timestamp }}.sql
+        PGPASSWORD={{ db_password }}
+        pg_dump -h {{ pg_host }} -U {{ pg_user }} {{ pg_db }}
+        > {{ remote_backup_path }}/kong_config_{{ timestamp }}.sql
 
-    - name: Fetch backup to AWX
+    - name: Fetch backup to AWX repo
       fetch:
-        src: "{{ remote_backup_path }}/kong_db_{{ timestamp }}.sql"
+        src: "{{ remote_backup_path }}/kong_config_{{ timestamp }}.sql"
         dest: "{{ local_repo_path }}/backups/"
         flat: yes
 
-    - name: Git add backup
+    - name: Git add
       delegate_to: localhost
       command: git add backups/
       args:
@@ -50,7 +34,7 @@
 
     - name: Git commit
       delegate_to: localhost
-      command: git commit -m "Kong DB backup from {{ inventory_hostname }} on {{ timestamp }}"
+      command: git commit -m "Kong config backup from {{ inventory_hostname }} on {{ timestamp }}"
       args:
         chdir: "{{ local_repo_path }}"
       ignore_errors: yes
