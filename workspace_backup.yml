@@ -9,16 +9,12 @@
     pg_user: kong
     pg_db: kong
     remote_backup_path: /tmp
+    local_clone_path: /tmp/kong_backup_repo
     timestamp: "{{ ansible_date_time.date }}_{{ ansible_date_time.time | replace(':','-') }}"
-    local_repo_path: "/runner/project"
     backup_file: "kong_config_{{ inventory_hostname }}_{{ timestamp }}.sql"
+    repo_url: "https://github.com/<your-username>/workspace-backup-demo.git"
 
   tasks:
-
-    - name: Check pg_dump availability
-      command: which pg_dump
-      register: pg_dump_check
-      failed_when: pg_dump_check.rc != 0
 
     - name: Dump Kong configuration database
       shell: >
@@ -28,10 +24,10 @@
       args:
         executable: /bin/bash
 
-    - name: Fetch backup to AWX repo
+    - name: Fetch backup to AWX temp
       fetch:
         src: "{{ remote_backup_path }}/{{ backup_file }}"
-        dest: "{{ local_repo_path }}/backups/"
+        dest: "/tmp/"
         flat: yes
 
     - name: Remove remote temporary backup file
@@ -40,22 +36,45 @@
         state: absent
 
     # -------------------------
-    # Git operations on AWX node
+    # Git operations (clean clone)
     # -------------------------
 
-    - name: Git add backup
+    - name: Remove old local clone if exists
+      delegate_to: localhost
+      become: false
+      file:
+        path: "{{ local_clone_path }}"
+        state: absent
+
+    - name: Clone repository
+      delegate_to: localhost
+      become: false
+      git:
+        repo: "{{ repo_url }}"
+        dest: "{{ local_clone_path }}"
+        version: main
+        force: yes
+
+    - name: Copy backup file into repo
+      delegate_to: localhost
+      become: false
+      copy:
+        src: "/tmp/{{ backup_file }}"
+        dest: "{{ local_clone_path }}/backups/{{ backup_file }}"
+
+    - name: Git add
       delegate_to: localhost
       become: false
       command: git add backups/
       args:
-        chdir: "{{ local_repo_path }}"
+        chdir: "{{ local_clone_path }}"
 
     - name: Git commit
       delegate_to: localhost
       become: false
       command: git commit -m "Kong config backup from {{ inventory_hostname }} on {{ timestamp }}"
       args:
-        chdir: "{{ local_repo_path }}"
+        chdir: "{{ local_clone_path }}"
       ignore_errors: yes
 
     - name: Git push
@@ -63,4 +82,4 @@
       become: false
       command: git push
       args:
-        chdir: "{{ local_repo_path }}"
+        chdir: "{{ local_clone_path }}"
