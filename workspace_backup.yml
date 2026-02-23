@@ -10,7 +10,7 @@
     pg_db: kong
     remote_backup_path: /tmp
     local_clone_path: /tmp/kong_backup_repo
-    repo_url: "https://darshanchikhalekar-cell:github_pat_11B27BMQI0dip5IsztnacA_5XDTfBOcpMKpgLQ5hS7GD8N1E7YZD4KotVfv29sAhJTBHZRAIXIGHinvli/darshanchikhalekar-cell/Kong-Workspace-Backup.git"
+    repo_url: "https://darshanchikhalekar-cell:github_pat_11B27BMQI0dip5IsztnacA_5XDTfBOcpMKpgLQ5hS7GD8N1E7YZD4KotVfv29sAhJTBHZRAIXIGHinvli@github.com/darshanchikhalekar-cell/Kong-Workspace-Backup.git"
     timestamp: "{{ ansible_date_time.date }}_{{ ansible_date_time.time | replace(':','-') }}"
     backup_file: "kong_config_{{ inventory_hostname }}_{{ timestamp }}.sql"
 
@@ -97,4 +97,5 @@
       command: git push
       args:
         chdir: "{{ local_clone_path }}"
+
 
