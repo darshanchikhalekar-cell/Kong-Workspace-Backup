@@ -36,7 +36,7 @@
         state: absent
 
     # -------------------------
-    # Git operations
+    # Git operations (clean way)
     # -------------------------
 
     - name: Remove old local clone if exists
@@ -46,7 +46,7 @@
         path: "{{ local_clone_path }}"
         state: absent
 
-    - name: Clone repository
+    - name: Clone repository (AWX will use Source Control credential)
       delegate_to: localhost
       become: false
       git:
@@ -76,22 +76,15 @@
       args:
         chdir: "{{ local_clone_path }}"
 
-    - name: Git add
+    - name: Commit changes
       delegate_to: localhost
       become: false
-      command: git add backups/
-      args:
-        chdir: "{{ local_clone_path }}"
-
-    - name: Git commit
-      delegate_to: localhost
-      become: false
-      command: git commit -m "Kong config backup from {{ inventory_hostname }} on {{ timestamp }}"
+      command: git commit -am "Kong config backup from {{ inventory_hostname }} on {{ timestamp }}"
       args:
         chdir: "{{ local_clone_path }}"
       ignore_errors: yes
 
-    - name: Git push
+    - name: Push changes (uses existing authenticated remote)
       delegate_to: localhost
       become: false
       command: git push
