@@ -10,7 +10,7 @@
     pg_db: kong
     remote_backup_path: /tmp
     local_clone_path: /tmp/kong_backup_repo
-    repo_url: "https://github.com/darshanchikhalekar-cell/Kong-Workspace-Backup.git"
+    repo_url: "https://darshanchikhalekar-cell:ghp_xxxxxxxxxxxxxxxxx@github.com/darshanchikhalekar-cell/Kong-Workspace-Backup.git"
     timestamp: "{{ ansible_date_time.date }}_{{ ansible_date_time.time | replace(':','-') }}"
     backup_file: "kong_config_{{ inventory_hostname }}_{{ timestamp }}.sql"
 
@@ -46,7 +46,7 @@
         path: "{{ local_clone_path }}"
         state: absent
 
-    - name: Clone repository (uses AWX Source Control credential)
+    - name: Clone repository (authenticated)
       delegate_to: localhost
       become: false
       git:
