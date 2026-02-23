@@ -10,7 +10,7 @@
     pg_db: kong
     remote_backup_path: /tmp
     local_clone_path: /tmp/kong_backup_repo
-    repo_url: "https://darshanchikhalekar-cell:github_pat_11B27BMQI0dip5IsztnacA_5XDTfBOcpMKpgLQ5hS7GD8N1E7YZD4KotVfv29sAhJTBHZRAIXIGHinvli@github.com/darshanchikhalekar-cell/Kong-Workspace-Backup.git"
+    repo_url: "https://github.com/darshanchikhalekar-cell/Kong-Workspace-Backup.git"
     timestamp: "{{ ansible_date_time.date }}_{{ ansible_date_time.time | replace(':','-') }}"
     backup_file: "kong_config_{{ inventory_hostname }}_{{ timestamp }}.sql"
 
@@ -46,7 +46,7 @@
         path: "{{ local_clone_path }}"
         state: absent
 
-    - name: Clone repository (authenticated)
+    - name: Clone repository (public read)
       delegate_to: localhost
       become: false
       git:
@@ -91,11 +91,11 @@
         chdir: "{{ local_clone_path }}"
       ignore_errors: yes
 
-    - name: Push changes
+    - name: Push changes securely
       delegate_to: localhost
       become: false
-      command: git push
+      command: >
+        git push https://darshanchikhalekar-cell:{{ github_token }}
+        @github.com/darshanchikhalekar-cell/Kong-Workspace-Backup.git
       args:
         chdir: "{{ local_clone_path }}"
-
-
