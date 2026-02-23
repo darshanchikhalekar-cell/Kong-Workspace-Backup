@@ -94,8 +94,9 @@
     - name: Push changes securely
       delegate_to: localhost
       become: false
-      command: >
-        git push https://darshanchikhalekar-cell:{{ github_token }}
-        @github.com/darshanchikhalekar-cell/Kong-Workspace-Backup.git
+      shell: >
+        git push https://darshanchikhalekar-cell:${GITHUB_TOKEN}@github.com/darshanchikhalekar-cell/Kong-Workspace-Backup.git
       args:
         chdir: "{{ local_clone_path }}"
+      environment:
+        GITHUB_TOKEN: "{{ github_token }}"
