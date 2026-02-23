@@ -16,11 +16,6 @@
 
   tasks:
 
-    - name: Check pg_dump availability
-      command: which pg_dump
-      register: pg_dump_check
-      failed_when: pg_dump_check.rc != 0
-
     - name: Dump Kong configuration database
       shell: >
         PGPASSWORD={{ db_password }}
@@ -41,7 +36,7 @@
         state: absent
 
     # -------------------------
-    # Git operations (clean clone approach)
+    # Git operations
     # -------------------------
 
     - name: Remove old local clone if exists
@@ -67,13 +62,6 @@
         src: "/tmp/{{ backup_file }}"
         dest: "{{ local_clone_path }}/backups/{{ backup_file }}"
 
-    - name: Git add
-      delegate_to: localhost
-      become: false
-      command: git add backups/
-      args:
-        chdir: "{{ local_clone_path }}"
-
     - name: Configure Git username
       delegate_to: localhost
       become: false
@@ -85,6 +73,13 @@
       delegate_to: localhost
       become: false
       command: git config user.email "awx@demo.local"
+      args:
+        chdir: "{{ local_clone_path }}"
+
+    - name: Git add
+      delegate_to: localhost
+      become: false
+      command: git add backups/
       args:
         chdir: "{{ local_clone_path }}"
 
