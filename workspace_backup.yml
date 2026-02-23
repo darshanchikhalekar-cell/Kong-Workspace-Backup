@@ -55,12 +55,19 @@
         version: main
         force: yes
 
-    - name: Copy backup file into repo
+    - name: Ensure backup type folder exists
+      delegate_to: localhost
+      become: false
+      file:
+        path: "{{ local_clone_path }}/backups/{{ backup_type }}"
+        state: directory
+
+    - name: Copy backup file into correct folder
       delegate_to: localhost
       become: false
       copy:
         src: "/tmp/{{ backup_file }}"
-        dest: "{{ local_clone_path }}/backups/{{ backup_file }}"
+        dest: "{{ local_clone_path }}/backups/{{ backup_type }}/{{ backup_file }}"
 
     - name: Configure Git username
       delegate_to: localhost
@@ -86,7 +93,7 @@
     - name: Commit changes
       delegate_to: localhost
       become: false
-      command: git commit -m "Kong config backup from {{ inventory_hostname }} on {{ timestamp }}"
+      command: git commit -m "Kong {{ backup_type }} backup from {{ inventory_hostname }} on {{ timestamp }}"
       args:
         chdir: "{{ local_clone_path }}"
       ignore_errors: yes
